@@ -106,10 +106,9 @@ class SudokuSolver:
                     self.col_cache[j].add(num)
                     self.box_cache[(i // 3) * 3 + j // 3].add(num)
 
-
     def check_row(self, row: int) -> bool:
         self.logger.info(f"Checking row {row} for uniqueness.")
-        numbers = self.grid[row * 9: (row + 1) * 9]
+        numbers = self.grid[row * 9 : (row + 1) * 9]
         return self._check_unique(numbers)
 
     def check_column(self, col: int) -> bool:
@@ -151,8 +150,11 @@ class SudokuSolver:
         box_index = (row // 3) * 3 + col // 3
 
         for number in range(1, 10):
-            if number not in self.row_cache[row] and number not in self.col_cache[col] and number not in self.box_cache[
-                box_index]:
+            if (
+                number not in self.row_cache[row]
+                and number not in self.col_cache[col]
+                and number not in self.box_cache[box_index]
+            ):
                 grid[row * 9 + col] = number
                 self.row_cache[row].add(number)
                 self.col_cache[col].add(number)
