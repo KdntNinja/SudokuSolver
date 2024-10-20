@@ -8,12 +8,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 
+
 class SudokuSolver:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         pyautogui.PAUSE = 0
         self.grid = []
-        self.fixed_cells = []  # Track which cells are fixed
+        self.fixed_cells = []
         self.driver = None
         self.wait = None
         self.url = "https://www.livesudoku.com/en/sudoku/evil/"
@@ -24,6 +25,10 @@ class SudokuSolver:
     def setup_driver(self) -> None:
         self.logger.info("Setting up WebDriver")
         options = webdriver.FirefoxOptions()
+
+        profile_path = os.path.expanduser("~/.mozilla/firefox/6lj6wpsv.default-release/")
+        options.set_preference("profile", profile_path)
+
         if os.getenv("HEADLESS") == "True":
             options.add_argument("--headless")
 
@@ -31,7 +36,7 @@ class SudokuSolver:
         try:
             self.driver = webdriver.Firefox(service=service, options=options)
             self.wait = WebDriverWait(self.driver, 3)
-            self.logger.info("WebDriver setup complete")
+            self.logger.info("WebDriver setup complete with uBlock Origin")
         except Exception as e:
             self.logger.error(
                 f"Failed to set up WebDriver. Make sure geckodriver is installed and in your PATH: {e}"
@@ -152,7 +157,8 @@ class SudokuSolver:
         box_index = (row // 3) * 3 + col // 3
 
         for number in range(1, 10):
-            if number not in self.row_cache[row] and number not in self.col_cache[col] and number not in self.box_cache[box_index]:
+            if number not in self.row_cache[row] and number not in self.col_cache[col] and number not in self.box_cache[
+                box_index]:
                 grid[row * 9 + col] = number
                 self.row_cache[row].add(number)
                 self.col_cache[col].add(number)
