@@ -2,7 +2,6 @@ import logging
 import os
 import threading
 
-import time
 import pyautogui
 import requests
 from bs4 import BeautifulSoup
@@ -15,6 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 class SudokuSolver:
     def __init__(self):
+        self.fast = False
         self.logger = logging.getLogger(__name__)
         pyautogui.PAUSE = 0
         pyautogui.FAILSAFE = False
@@ -164,9 +164,10 @@ class SudokuSolver:
         if solved:
             self.logger.info("Solved!")
             try:
-                start_time = time.time()
-                self._submit_solution()
-                print("--- %s seconds ---" % (time.time() - start_time))
+                if self.fast:
+                    self._submit_solution()
+                else:
+                    self._submit_solution_slow()
             except Exception as e:
                 self.logger.error(f"An error occurred: {e}")
         else:
@@ -221,6 +222,29 @@ class SudokuSolver:
                         )
                         self.driver.execute_script("arguments[0].textContent = arguments[1];", elem,
                                                    str(self.grid[i * 9 + j]))
+
+        except Exception as e:
+            self.logger.error(f"An error occurred: {e}")
+
+        self.logger.info("Solution submitted.")
+    
+    def _submit_solution_slow(self) -> None:
+        self.logger.info("Submitting solution")
+
+        try:
+            for i in range(9):
+                for j in range(9):
+                    if self.grid[i * 9 + j] != 0 and not self.fixed_cells[i * 9 + j]:
+                        elem = self.wait.until(
+                            lambda driver: driver.find_element(
+                                By.CSS_SELECTOR, f"#td{i * 9 + j}"
+                            )
+                        )
+                        self.driver.execute_script(
+                            "arguments[0].value = arguments[1];", elem, self.grid[i * 9 + j]
+                        )
+                        elem.click()
+                        pyautogui.press(str(self.grid[i * 9 + j]))
 
         except Exception as e:
             self.logger.error(f"An error occurred: {e}")
