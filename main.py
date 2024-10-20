@@ -13,10 +13,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 class SudokuSolver:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        pyautogui.PAUSE = 0
         self.grid = []
         self.driver = None
         self.wait = None
         self.url = "https://www.livesudoku.com/en/sudoku/evil/"
+        self.row_cache = [set() for _ in range(9)]
+        self.col_cache = [set() for _ in range(9)]
+        self.box_cache = [set() for _ in range(9)]
 
     def setup_driver(self) -> None:
         self.logger.info("Setting up WebDriver")
@@ -27,7 +31,7 @@ class SudokuSolver:
         service = Service("/usr/bin/geckodriver")
         try:
             self.driver = webdriver.Firefox(service=service, options=options)
-            self.wait = WebDriverWait(self.driver, 30)
+            self.wait = WebDriverWait(self.driver, 3)
             self.logger.info("WebDriver setup complete")
         except Exception as e:
             self.logger.error(
@@ -89,7 +93,19 @@ class SudokuSolver:
         with open("sudoku_grid.html") as file:
             html = file.read()
         self.grid = self.extract_numbers_from_html(html)
+        self._initialize_caches()
         self.logger.info("Cells extracted.")
+
+    def _initialize_caches(self):
+        """Initialize row, column, and box caches for faster lookup during solving."""
+        for i in range(9):
+            for j in range(9):
+                num = self.grid[i * 9 + j]
+                if num != 0:
+                    self.row_cache[i].add(num)
+                    self.col_cache[j].add(num)
+                    self.box_cache[(i // 3) * 3 + j // 3].add(num)
+
 
     def check_row(self, row: int) -> bool:
         self.logger.info(f"Checking row {row} for uniqueness.")
@@ -132,12 +148,24 @@ class SudokuSolver:
         if not empty:
             return True
         row, col = empty
+        box_index = (row // 3) * 3 + col // 3
+
         for number in range(1, 10):
-            if self._is_valid(grid, (row, col), number):
+            if number not in self.row_cache[row] and number not in self.col_cache[col] and number not in self.box_cache[
+                box_index]:
                 grid[row * 9 + col] = number
+                self.row_cache[row].add(number)
+                self.col_cache[col].add(number)
+                self.box_cache[box_index].add(number)
+
                 if self._solve(grid):
                     return True
+
                 grid[row * 9 + col] = 0
+                self.row_cache[row].remove(number)
+                self.col_cache[col].remove(number)
+                self.box_cache[box_index].remove(number)
+
         return False
 
     @staticmethod
