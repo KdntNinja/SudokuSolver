@@ -123,7 +123,7 @@ class SudokuSolver:
 
     def check_row(self, row: int) -> bool:
         self.logger.info(f"Checking row {row} for uniqueness.")
-        numbers = self.grid[row * 9 : (row + 1) * 9]
+        numbers = self.grid[row * 9: (row + 1) * 9]
         return self._check_unique(numbers)
 
     def check_column(self, col: int) -> bool:
@@ -165,10 +165,10 @@ class SudokuSolver:
         box_index = (row // 3) * 3 + col // 3
 
         available_numbers = (
-            set(range(1, 10))
-            - self.row_cache[row]
-            - self.col_cache[col]
-            - self.box_cache[box_index]
+                set(range(1, 10))
+                - self.row_cache[row]
+                - self.col_cache[col]
+                - self.box_cache[box_index]
         )
 
         for number in available_numbers:
