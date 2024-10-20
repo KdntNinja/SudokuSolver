@@ -59,7 +59,8 @@ class SudokuSolver:
             self.logger.info("Adding uBlock Origin extension")
             self.driver.install_addon(xpi_path, temporary=True)
 
-            self.driver.execute_script("""
+            self.driver.execute_script(
+                """
                 const style = document.createElement('style');
                 style.innerHTML = `
                     * {
@@ -68,7 +69,8 @@ class SudokuSolver:
                     }
                 `;
                 document.head.appendChild(style);
-            """)
+            """
+            )
             options.add_argument("--headless")
             self.logger.info("WebDriver setup complete")
         except Exception as e:
@@ -218,14 +220,20 @@ class SudokuSolver:
         try:
             elements = {
                 (i, j): self.wait.until(
-                    lambda driver: driver.find_element(By.CSS_SELECTOR, f"#td{i * 9 + j}")
+                    lambda driver: driver.find_element(
+                        By.CSS_SELECTOR, f"#td{i * 9 + j}"
+                    )
                 )
-                for i in range(9) for j in range(9) if (i, j) in [(action[0], action[1]) for action in actions]
+                for i in range(9)
+                for j in range(9)
+                if (i, j) in [(action[0], action[1]) for action in actions]
             }
 
-            for (i, j, value) in actions:
+            for i, j, value in actions:
                 elem = elements[(i, j)]
-                self.driver.execute_script("arguments[0].value = arguments[1];", elem, value)
+                self.driver.execute_script(
+                    "arguments[0].value = arguments[1];", elem, value
+                )
                 elem.click()
                 pyautogui.press(str(self.grid[i * 9 + j]))
 
@@ -254,10 +262,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     solver = SudokuSolver()
 
-
     def run_solver():
         solver.run()
-
 
     t = threading.Thread(target=run_solver)
     t.start()
