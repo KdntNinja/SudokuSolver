@@ -1,9 +1,6 @@
 import logging
 import os
-import time
 
-import matplotlib.pyplot as plt
-import numpy as np
 import pyautogui
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -96,7 +93,7 @@ class SudokuSolver:
 
     def check_row(self, row: int) -> bool:
         self.logger.info(f"Checking row {row} for uniqueness.")
-        numbers = self.grid[row * 9 : (row + 1) * 9]
+        numbers = self.grid[row * 9: (row + 1) * 9]
         return self._check_unique(numbers)
 
     def check_column(self, col: int) -> bool:
