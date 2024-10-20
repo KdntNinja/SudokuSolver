@@ -2,14 +2,10 @@ import logging
 import os
 import time
 
-import cv2
-import pyautogui
-import pyautogui as pg
-from bs4 import BeautifulSoup
-
 import matplotlib.pyplot as plt
 import numpy as np
-import pytesseract
+import pyautogui
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
@@ -56,7 +52,10 @@ class SudokuSolver:
             self.logger.info("Page loaded.")
             try:
                 consent_button = WebDriverWait(self.driver, 3).until(
-                    lambda driver: driver.find_element(By.XPATH, "//button[@class='fc-button fc-cta-consent fc-primary-button'][contains(., 'Consent')]")
+                    lambda driver: driver.find_element(
+                        By.XPATH,
+                        "//button[@class='fc-button fc-cta-consent fc-primary-button'][contains(., 'Consent')]",
+                    )
                 )
                 consent_button.click()
             except TimeoutException:
@@ -74,13 +73,13 @@ class SudokuSolver:
 
     @staticmethod
     def extract_numbers_from_html(html):
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, "html.parser")
 
-        td_elements = soup.find_all('td')
+        td_elements = soup.find_all("td")
         numbers = []
 
         for td in td_elements:
-            span = td.find('span', class_='fixedcell')
+            span = td.find("span", class_="fixedcell")
             if span:
                 numbers.append(int(span.text))
             else:
@@ -95,46 +94,9 @@ class SudokuSolver:
         self.grid = self.extract_numbers_from_html(html)
         self.logger.info("Cells extracted.")
 
-    def display_grid(self) -> None:
-        if not self.grid:
-            self.logger.error("The grid is empty. Cannot display.")
-            return
-
-        self.logger.info(f"Displaying the grid. {self.grid}")
-        grid_2d = np.array(self.grid).reshape((9, 9))
-
-        fig, ax = plt.subplots(figsize=(6, 6))
-        ax.imshow(np.ones((9, 9)), cmap="gray", vmin=0, vmax=1)
-
-        for (i, j), value in np.ndenumerate(grid_2d):
-            if value != 0:
-                ax.text(
-                    j,
-                    i,
-                    str(int(value)),
-                    ha="center",
-                    va="center",
-                    fontsize=20,
-                    color="black",
-                )
-
-        for i in range(10):
-            if i % 3 == 0:
-                ax.axhline(i - 0.5, color="black", linewidth=3)
-                ax.axvline(i - 0.5, color="black", linewidth=3)
-            else:
-                ax.axhline(i - 0.5, color="black", linewidth=1)
-                ax.axvline(i - 0.5, color="black", linewidth=1)
-
-        ax.set_title("Sudoku Grid")
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-        plt.show()
-
     def check_row(self, row: int) -> bool:
         self.logger.info(f"Checking row {row} for uniqueness.")
-        numbers = self.grid[row * 9:(row + 1) * 9]
+        numbers = self.grid[row * 9 : (row + 1) * 9]
         return self._check_unique(numbers)
 
     def check_column(self, col: int) -> bool:
@@ -165,7 +127,6 @@ class SudokuSolver:
                 self._submit_solution()
             except Exception as e:
                 self.logger.error(f"An error occurred: {e}")
-            self.display_grid()
         else:
             self.logger.error("Could not solve the Sudoku puzzle.")
 
@@ -229,12 +190,11 @@ class SudokuSolver:
             self.get_html()
             self.extract_cells()
             self.solve()
-            time.sleep(20)
         except Exception as e:
             self.logger.error(f"An error occurred: {e}")
-        finally:
             self.teardown_driver()
-        self.logger.info("Run method complete")
+        finally:
+            self.logger.info("Run method complete")
 
 
 if __name__ == "__main__":
