@@ -1,13 +1,13 @@
 import logging
+
 from matplotlib import pyplot as plt
 import numpy as np
 
 
 class SudokuSolver:
-    def __init__(self, file_location: str):
-        self.image_location = file_location
-        self.grid = []
+    def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.grid = []
 
     def generate_grid(self) -> None:
         # fmt: off
@@ -25,7 +25,7 @@ class SudokuSolver:
         # fmt: on
 
     def display_grid(self) -> None:
-        if len(self.grid) == 0:
+        if not self.grid:
             self.logger.error("The grid is empty. Cannot display.")
             return
 
@@ -64,18 +64,12 @@ class SudokuSolver:
     def check_row(self, row: int) -> bool:
         self.logger.debug(f"Checking row {row} for uniqueness.")
         numbers = self.grid[row]
-        result = self._check_unique(numbers)
-        if not result:
-            self.logger.warning(f"Row {row} has duplicates. {numbers}")
-        return result
+        return self._check_unique(numbers)
 
     def check_column(self, col: int) -> bool:
         self.logger.debug(f"Checking column {col} for uniqueness.")
         numbers = [self.grid[row][col] for row in range(9)]
-        result = self._check_unique(numbers)
-        if not result:
-            self.logger.warning(f"Column {col} has duplicates. {numbers}")
-        return result
+        return self._check_unique(numbers)
 
     @staticmethod
     def _check_unique(numbers: list) -> bool:
@@ -88,7 +82,7 @@ class SudokuSolver:
         return True
 
     def solve(self):
-        if len(self.grid) == 0:
+        if not self.grid:
             self.logger.error("The grid is empty. Cannot solve.")
             return
 
@@ -103,32 +97,33 @@ class SudokuSolver:
     def _solve(self, grid: list) -> bool:
         empty = self._find_empty(grid)
         if not empty:
-            return True  # Solved
+            return True
         row, col = empty
         for number in range(1, 10):
             if self._is_valid(grid, (row, col), number):
                 grid[row][col] = number
                 if self._solve(grid):
                     return True
-                grid[row][col] = 0  # Backtrack
-        return False  # Trigger backtracking
+                grid[row][col] = 0
+        return False
 
-    def _find_empty(self, grid: list) -> tuple:
+    @staticmethod
+    def _find_empty(grid: list) -> None | tuple:
         for i in range(9):
             for j in range(9):
                 if grid[i][j] == 0:
-                    return (i, j)  # Return the position of an empty cell
-        return None  # No empty cells
+                    return i, j
+        return None
 
-    def _is_valid(self, grid: list, position: tuple, number: int) -> bool:
+    @staticmethod
+    def _is_valid(grid: list, position: tuple, number: int) -> bool:
         row, col = position
-        # Check row
         if number in grid[row]:
             return False
-        # Check column
+
         if number in [grid[r][col] for r in range(9)]:
             return False
-        # Check 3x3 box
+
         box_row_start = (row // 3) * 3
         box_col_start = (col // 3) * 3
         for r in range(box_row_start, box_row_start + 3):
@@ -144,5 +139,5 @@ class SudokuSolver:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    solver = SudokuSolver("sudoku.jpg")
+    solver = SudokuSolver()
     solver.run()
