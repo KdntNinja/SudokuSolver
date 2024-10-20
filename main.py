@@ -1,14 +1,14 @@
 import logging
 import os
+
 import pyautogui
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
 
 class SudokuSolver:
@@ -78,19 +78,7 @@ class SudokuSolver:
             self.logger.info("Loading Sudoku page")
             self.driver.get(self.url)
             self.logger.info("Page loaded.")
-            try:
-                consent_button = WebDriverWait(self.driver, 3).until(
-                    lambda driver: driver.find_element(
-                        By.XPATH,
-                        "//button[@class='fc-button fc-cta-consent fc-primary-button'][contains(., 'Consent')]",
-                    )
-                )
-                consent_button.click()
-            except TimeoutException:
-                pass
-            playarea = self.wait.until(
-                lambda driver: driver.find_element(By.CSS_SELECTOR, "#playarea")
-            )
+            playarea = self.driver.find_element(By.CSS_SELECTOR, "#playarea")
             playarea_html = playarea.get_attribute("innerHTML")
             self.logger.info("Getting all HTML in #playarea")
             with open("sudoku_grid.html", "w") as file:
@@ -102,19 +90,17 @@ class SudokuSolver:
     @staticmethod
     def extract_numbers_from_html(html):
         soup = BeautifulSoup(html, "html.parser")
-
         td_elements = soup.find_all("td")
-        numbers = []
-        fixed_cells = []
 
-        for td in td_elements:
-            span = td.find("span", class_="fixedcell")
-            if span:
-                numbers.append(int(span.text))
-                fixed_cells.append(True)
-            else:
-                numbers.append(0)
-                fixed_cells.append(False)
+        numbers = [
+            (
+                int(td.find("span", class_="fixedcell").text)
+                if td.find("span", class_="fixedcell")
+                else 0
+            )
+            for td in td_elements
+        ]
+        fixed_cells = [bool(td.find("span", class_="fixedcell")) for td in td_elements]
 
         return numbers, fixed_cells
 
@@ -178,24 +164,26 @@ class SudokuSolver:
         row, col = empty
         box_index = (row // 3) * 3 + col // 3
 
-        for number in range(1, 10):
-            if (
-                number not in self.row_cache[row]
-                and number not in self.col_cache[col]
-                and number not in self.box_cache[box_index]
-            ):
-                grid[row * 9 + col] = number
-                self.row_cache[row].add(number)
-                self.col_cache[col].add(number)
-                self.box_cache[box_index].add(number)
+        available_numbers = (
+            set(range(1, 10))
+            - self.row_cache[row]
+            - self.col_cache[col]
+            - self.box_cache[box_index]
+        )
 
-                if self._solve(grid):
-                    return True
+        for number in available_numbers:
+            grid[row * 9 + col] = number
+            self.row_cache[row].add(number)
+            self.col_cache[col].add(number)
+            self.box_cache[box_index].add(number)
 
-                grid[row * 9 + col] = 0
-                self.row_cache[row].remove(number)
-                self.col_cache[col].remove(number)
-                self.box_cache[box_index].remove(number)
+            if self._solve(grid):
+                return True
+
+            grid[row * 9 + col] = 0
+            self.row_cache[row].remove(number)
+            self.col_cache[col].remove(number)
+            self.box_cache[box_index].remove(number)
 
         return False
 
