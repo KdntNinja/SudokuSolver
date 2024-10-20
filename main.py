@@ -1,6 +1,5 @@
 import logging
 import os
-
 import pyautogui
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -9,12 +8,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 
-
 class SudokuSolver:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         pyautogui.PAUSE = 0
         self.grid = []
+        self.fixed_cells = []  # Track which cells are fixed
         self.driver = None
         self.wait = None
         self.url = "https://www.livesudoku.com/en/sudoku/evil/"
@@ -78,21 +77,24 @@ class SudokuSolver:
 
         td_elements = soup.find_all("td")
         numbers = []
+        fixed_cells = []  # To track which cells are fixed
 
         for td in td_elements:
             span = td.find("span", class_="fixedcell")
             if span:
                 numbers.append(int(span.text))
+                fixed_cells.append(True)  # This cell is fixed
             else:
                 numbers.append(0)
+                fixed_cells.append(False)  # This cell is not fixed
 
-        return numbers
+        return numbers, fixed_cells
 
     def extract_cells(self) -> None:
         self.logger.info("Extracting Sudoku cells from HTML")
         with open("sudoku_grid.html") as file:
             html = file.read()
-        self.grid = self.extract_numbers_from_html(html)
+        self.grid, self.fixed_cells = self.extract_numbers_from_html(html)
         self._initialize_caches()
         self.logger.info("Cells extracted.")
 
@@ -108,7 +110,7 @@ class SudokuSolver:
 
     def check_row(self, row: int) -> bool:
         self.logger.info(f"Checking row {row} for uniqueness.")
-        numbers = self.grid[row * 9 : (row + 1) * 9]
+        numbers = self.grid[row * 9: (row + 1) * 9]
         return self._check_unique(numbers)
 
     def check_column(self, col: int) -> bool:
@@ -150,11 +152,7 @@ class SudokuSolver:
         box_index = (row // 3) * 3 + col // 3
 
         for number in range(1, 10):
-            if (
-                number not in self.row_cache[row]
-                and number not in self.col_cache[col]
-                and number not in self.box_cache[box_index]
-            ):
+            if number not in self.row_cache[row] and number not in self.col_cache[col] and number not in self.box_cache[box_index]:
                 grid[row * 9 + col] = number
                 self.row_cache[row].add(number)
                 self.col_cache[col].add(number)
@@ -170,36 +168,19 @@ class SudokuSolver:
 
         return False
 
-    @staticmethod
-    def _find_empty(grid: list) -> None | tuple:
+    def _find_empty(self, grid: list) -> None | tuple:
+        """Find the next empty cell, skipping fixed cells."""
         for i in range(9):
             for j in range(9):
-                if grid[i * 9 + j] == 0:
+                if grid[i * 9 + j] == 0 and not self.fixed_cells[i * 9 + j]:
                     return i, j
         return None
-
-    @staticmethod
-    def _is_valid(grid: list, position: tuple, number: int) -> bool:
-        row, col = position
-        if number in [grid[row * 9 + c] for c in range(9)]:
-            return False
-
-        if number in [grid[r * 9 + col] for r in range(9)]:
-            return False
-
-        box_row_start = (row // 3) * 3
-        box_col_start = (col // 3) * 3
-        for r in range(box_row_start, box_row_start + 3):
-            for c in range(box_col_start, box_col_start + 3):
-                if grid[r * 9 + c] == number:
-                    return False
-        return True
 
     def _submit_solution(self) -> None:
         self.logger.info("Submitting solution")
         for i in range(9):
             for j in range(9):
-                if self.grid[i * 9 + j] != 0:
+                if self.grid[i * 9 + j] != 0 and not self.fixed_cells[i * 9 + j]:
                     try:
                         elem = self.wait.until(
                             lambda driver: driver.find_element(By.ID, f"td{i * 9 + j}")
@@ -221,6 +202,8 @@ class SudokuSolver:
             self.logger.error(f"An error occurred: {e}")
             self.teardown_driver()
         finally:
+            with open("sudoku_grid.html", "w") as file:
+                file.truncate(0)
             self.logger.info("Run method complete")
 
 
