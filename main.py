@@ -1,5 +1,7 @@
 import logging
 import os
+import threading
+import time
 
 import pyautogui
 import requests
@@ -15,6 +17,7 @@ class SudokuSolver:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         pyautogui.PAUSE = 0
+        pyautogui.FAILSAFE = False
         self.grid = []
         self.fixed_cells = []
         self.driver = None
@@ -47,9 +50,6 @@ class SudokuSolver:
 
         options = FirefoxOptions()
 
-        if os.getenv("HEADLESS") == "True":
-            options.add_argument("--headless")
-
         service = Service("/usr/bin/geckodriver")
 
         try:
@@ -59,6 +59,17 @@ class SudokuSolver:
             self.logger.info("Adding uBlock Origin extension")
             self.driver.install_addon(xpi_path, temporary=True)
 
+            self.driver.execute_script("""
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    * {
+                        transition: none !important;
+                        animation: none !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            """)
+            options.add_argument("--headless")
             self.logger.info("WebDriver setup complete")
         except Exception as e:
             self.logger.error(
@@ -196,17 +207,31 @@ class SudokuSolver:
 
     def _submit_solution(self) -> None:
         self.logger.info("Submitting solution")
-        for i in range(9):
-            for j in range(9):
-                if self.grid[i * 9 + j] != 0 and not self.fixed_cells[i * 9 + j]:
-                    try:
-                        elem = self.wait.until(
-                            lambda driver: driver.find_element(By.ID, f"td{i * 9 + j}")
-                        )
-                        elem.click()
-                        pyautogui.press(str(self.grid[i * 9 + j]))
-                    except Exception as e:
-                        self.logger.error(f"An error occurred: {e}")
+
+        actions = [
+            (i, j, self.grid[i * 9 + j])
+            for i in range(9)
+            for j in range(9)
+            if self.grid[i * 9 + j] != 0 and not self.fixed_cells[i * 9 + j]
+        ]
+
+        try:
+            elements = {
+                (i, j): self.wait.until(
+                    lambda driver: driver.find_element(By.CSS_SELECTOR, f"#td{i * 9 + j}")
+                )
+                for i in range(9) for j in range(9) if (i, j) in [(action[0], action[1]) for action in actions]
+            }
+
+            for (i, j, value) in actions:
+                elem = elements[(i, j)]
+                self.driver.execute_script("arguments[0].value = arguments[1];", elem, value)
+                elem.click()
+                pyautogui.press(str(self.grid[i * 9 + j]))
+
+        except Exception as e:
+            self.logger.error(f"An error occurred: {e}")
+
         self.logger.info("Solution submitted.")
 
     def run(self) -> None:
@@ -228,4 +253,14 @@ class SudokuSolver:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     solver = SudokuSolver()
-    solver.run()
+
+
+    def run_solver():
+        solver.run()
+
+
+    t = threading.Thread(target=run_solver)
+    t.start()
+    while t.is_alive():
+        time.sleep(1)
+    t.join()
