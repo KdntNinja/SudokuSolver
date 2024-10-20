@@ -21,22 +21,28 @@ class SudokuSolver:
         ]
 
     def display_grid(self):
+        # Convert the 1D grid to a 2D grid for plotting
         grid_2d = np.array(self.grid).reshape(9, 9)
 
         plt.figure(figsize=(6, 6))
-        plt.imshow(grid_2d, cmap="gray", vmin=0, vmax=9)
 
-        for i in range(10):
-            plt.axhline(i - 0.5, color="black", linewidth=2)
-            plt.axvline(i - 0.5, color="black", linewidth=2)
+        # Create a white grid background
+        plt.imshow(np.ones((9, 9)), cmap="gray", vmin=0, vmax=1)  # White background
 
-        plt.xticks(range(9), range(1, 10))
-        plt.yticks(range(9), range(1, 10))
-        plt.gca().invert_yaxis()
-
+        # Overlay the grid numbers
         for (i, j), value in np.ndenumerate(grid_2d):
             if value != 0:
                 plt.text(j, i, str(int(value)), ha='center', va='center', fontsize=20, color='black')
+
+        # Add grid lines
+        for i in range(10):
+            plt.axhline(i - 0.5, color="black", linewidth=2)  # Horizontal lines
+            plt.axvline(i - 0.5, color="black", linewidth=2)  # Vertical lines
+
+        # Set ticks and labels
+        plt.xticks(range(9), range(1, 10))
+        plt.yticks(range(9), range(1, 10))
+        plt.gca().invert_yaxis()  # Invert y-axis to have (1,1) at the top-left
 
         plt.title("Sudoku Grid")
         plt.show()
