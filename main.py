@@ -105,16 +105,16 @@ class SudokuSolver:
 
         td_elements = soup.find_all("td")
         numbers = []
-        fixed_cells = []  # To track which cells are fixed
+        fixed_cells = []
 
         for td in td_elements:
             span = td.find("span", class_="fixedcell")
             if span:
                 numbers.append(int(span.text))
-                fixed_cells.append(True)  # This cell is fixed
+                fixed_cells.append(True)
             else:
                 numbers.append(0)
-                fixed_cells.append(False)  # This cell is not fixed
+                fixed_cells.append(False)
 
         return numbers, fixed_cells
 
@@ -127,7 +127,6 @@ class SudokuSolver:
         self.logger.info("Cells extracted.")
 
     def _initialize_caches(self):
-        """Initialize row, column, and box caches for faster lookup during solving."""
         for i in range(9):
             for j in range(9):
                 num = self.grid[i * 9 + j]
@@ -201,7 +200,6 @@ class SudokuSolver:
         return False
 
     def _find_empty(self, grid: list) -> None | tuple:
-        """Find the next empty cell, skipping fixed cells."""
         for i in range(9):
             for j in range(9):
                 if grid[i * 9 + j] == 0 and not self.fixed_cells[i * 9 + j]:
