@@ -1,12 +1,14 @@
 import logging
 import os
 import pyautogui
+import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
 
 class SudokuSolver:
@@ -22,21 +24,40 @@ class SudokuSolver:
         self.col_cache = [set() for _ in range(9)]
         self.box_cache = [set() for _ in range(9)]
 
+    def download_ublock_origin(self) -> str:
+        self.logger.info("Checking if uBlock Origin extension is already downloaded")
+        xpi_path = "uBlock0.xpi"
+        if not os.path.exists(xpi_path):
+            self.logger.info("Downloading uBlock Origin extension")
+            url = "https://github.com/gorhill/uBlock/releases/download/1.60.1b15/uBlock0_1.60.1b15.firefox.signed.xpi"
+            response = requests.get(url)
+            with open(xpi_path, "wb") as file:
+                file.write(response.content)
+            self.logger.info("uBlock Origin downloaded")
+        else:
+            self.logger.info("uBlock Origin extension already exists, skipping download")
+        return xpi_path
+
     def setup_driver(self) -> None:
         self.logger.info("Setting up WebDriver")
-        options = webdriver.FirefoxOptions()
 
-        profile_path = os.path.expanduser("~/.mozilla/firefox/6lj6wpsv.default-release/")
-        options.set_preference("profile", profile_path)
+        xpi_path = self.download_ublock_origin()
+
+        options = FirefoxOptions()
 
         if os.getenv("HEADLESS") == "True":
             options.add_argument("--headless")
 
         service = Service("/usr/bin/geckodriver")
+
         try:
             self.driver = webdriver.Firefox(service=service, options=options)
             self.wait = WebDriverWait(self.driver, 3)
-            self.logger.info("WebDriver setup complete with uBlock Origin")
+
+            self.logger.info("Adding uBlock Origin extension")
+            self.driver.install_addon(xpi_path, temporary=True)
+
+            self.logger.info("WebDriver setup complete")
         except Exception as e:
             self.logger.error(
                 f"Failed to set up WebDriver. Make sure geckodriver is installed and in your PATH: {e}"
