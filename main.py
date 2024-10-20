@@ -1,8 +1,8 @@
 import logging
 import os
 import threading
-import time
 
+import time
 import pyautogui
 import requests
 from bs4 import BeautifulSoup
@@ -164,7 +164,9 @@ class SudokuSolver:
         if solved:
             self.logger.info("Solved!")
             try:
+                start_time = time.time()
                 self._submit_solution()
+                print("--- %s seconds ---" % (time.time() - start_time))
             except Exception as e:
                 self.logger.error(f"An error occurred: {e}")
         else:
@@ -210,32 +212,15 @@ class SudokuSolver:
     def _submit_solution(self) -> None:
         self.logger.info("Submitting solution")
 
-        actions = [
-            (i, j, self.grid[i * 9 + j])
-            for i in range(9)
-            for j in range(9)
-            if self.grid[i * 9 + j] != 0 and not self.fixed_cells[i * 9 + j]
-        ]
-
         try:
-            elements = {
-                (i, j): self.wait.until(
-                    lambda driver: driver.find_element(
-                        By.CSS_SELECTOR, f"#td{i * 9 + j}"
-                    )
-                )
-                for i in range(9)
-                for j in range(9)
-                if (i, j) in [(action[0], action[1]) for action in actions]
-            }
-
-            for i, j, value in actions:
-                elem = elements[(i, j)]
-                self.driver.execute_script(
-                    "arguments[0].value = arguments[1];", elem, value
-                )
-                elem.click()
-                pyautogui.press(str(self.grid[i * 9 + j]))
+            for i in range(9):
+                for j in range(9):
+                    if self.grid[i * 9 + j] and not self.fixed_cells[i * 9 + j]:
+                        elem = self.wait.until(
+                            lambda driver: driver.find_element(By.CSS_SELECTOR, f"#td{i * 9 + j}")
+                        )
+                        self.driver.execute_script("arguments[0].textContent = arguments[1];", elem,
+                                                   str(self.grid[i * 9 + j]))
 
         except Exception as e:
             self.logger.error(f"An error occurred: {e}")
@@ -267,6 +252,4 @@ if __name__ == "__main__":
 
     t = threading.Thread(target=run_solver)
     t.start()
-    while t.is_alive():
-        time.sleep(1)
     t.join()
